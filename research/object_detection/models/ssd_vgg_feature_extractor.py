@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 
-"""SSDFeatureExtractor for MobilenetV1 features."""
+"""SSDFeatureExtractor for Vgg features."""
 
 import tensorflow as tf
 
@@ -22,12 +22,12 @@ from object_detection.models import feature_map_generators
 from object_detection.utils import context_manager
 from object_detection.utils import ops
 from object_detection.utils import shape_utils
-from nets import mobilenet_v1
+from nets import vgg
 
 slim = tf.contrib.slim
 
 
-class SSDMobileNetV1FeatureExtractor(ssd_meta_arch.SSDFeatureExtractor):
+class SSDVggFeatureExtractor(ssd_meta_arch.SSDFeatureExtractor):
   """SSD Feature Extractor using MobilenetV1 features."""
 
   def __init__(self,
@@ -60,7 +60,7 @@ class SSDMobileNetV1FeatureExtractor(ssd_meta_arch.SSDFeatureExtractor):
         hyperparameters of the base feature extractor with the one from
         `conv_hyperparams_fn`.
     """
-    super(SSDMobileNetV1FeatureExtractor, self).__init__(
+    super(SSDVggFeatureExtractor, self).__init__(
         is_training, depth_multiplier, min_depth, pad_to_multiple,
         conv_hyperparams_fn, reuse_weights, use_explicit_padding, use_depthwise,
         override_base_feature_extractor_hyperparams)
@@ -94,6 +94,7 @@ class SSDMobileNetV1FeatureExtractor(ssd_meta_arch.SSDFeatureExtractor):
     preprocessed_inputs = shape_utils.check_min_image_dim(
         33, preprocessed_inputs)
 
+    '''
     feature_map_layout = {
         'from_layer': ['Conv2d_11_pointwise', 'Conv2d_13_pointwise', '', '',
                        '', ''],
@@ -101,24 +102,31 @@ class SSDMobileNetV1FeatureExtractor(ssd_meta_arch.SSDFeatureExtractor):
         'use_explicit_padding': self._use_explicit_padding,
         'use_depthwise': self._use_depthwise,
     }
-
-    with tf.variable_scope('MobilenetV1',
-                           reuse=self._reuse_weights) as scope:
+    '''
+    feature_map_layout = {
+        'from_layer': ['FeatureExtractor/vgg_16/conv4/conv4_3', 'FeatureExtractor/vgg_16/fc7', '', '',
+                       '', ''],
+        'layer_depth': [-1, -1, 256, 128, 128, 128],
+        'use_explicit_padding': self._use_explicit_padding,
+        'use_depthwise': self._use_depthwise,
+    }
+    with tf.variable_scope('vgg_16',
+                          reuse=self._reuse_weights) as scope:
       with slim.arg_scope(
-          mobilenet_v1.mobilenet_v1_arg_scope(
-              is_training=True, regularize_depthwise=True)):
+          vgg.vgg_arg_scope()):
         with (slim.arg_scope(self._conv_hyperparams_fn())
               if self._override_base_feature_extractor_hyperparams
               else context_manager.IdentityContextManager()):
         # TODO(skligys): Enable fused batch norm once quantization supports it.
           with slim.arg_scope([slim.batch_norm], fused=False):
-            _, image_features = mobilenet_v1.mobilenet_v1_base(
+        
+            _, image_features = vgg.vgg_16(
                 ops.pad_to_multiple(preprocessed_inputs, self._pad_to_multiple),
-                final_endpoint='Conv2d_13_pointwise',
-                min_depth=self._min_depth,
-                depth_multiplier=self._depth_multiplier,
-                use_explicit_padding=self._use_explicit_padding,
+                num_classes=None,
+                is_training=self._is_training,
                 scope=scope)
+      print(image_features.keys())
+      print(image_features.values())
       with slim.arg_scope(self._conv_hyperparams_fn()):
         # TODO(skligys): Enable fused batch norm once quantization supports it.
         with slim.arg_scope([slim.batch_norm], fused=False):

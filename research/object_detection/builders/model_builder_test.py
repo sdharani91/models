@@ -33,6 +33,7 @@ from object_detection.models.ssd_inception_v2_feature_extractor import SSDIncept
 from object_detection.models.ssd_inception_v3_feature_extractor import SSDInceptionV3FeatureExtractor
 from object_detection.models.ssd_mobilenet_v1_feature_extractor import SSDMobileNetV1FeatureExtractor
 from object_detection.models.ssd_mobilenet_v2_feature_extractor import SSDMobileNetV2FeatureExtractor
+from object_detection.models.ssd_vgg_feature_extractor import SSDVggFeatureExtractor
 from object_detection.protos import model_pb2
 
 FRCNN_RESNET_FEAT_MAPS = {
@@ -446,6 +447,81 @@ class ModelBuilderTest(tf.test.TestCase):
                           SSDMobileNetV2FeatureExtractor)
     self.assertTrue(model._normalize_loc_loss_by_codesize)
 
+
+  def test_create_ssd_vgg_model_from_config(self):
+    print("vgg testing called")
+    model_text_proto = """
+      ssd {
+        feature_extractor {
+          type: 'ssd_vgg'
+          conv_hyperparams {
+            regularizer {
+                l2_regularizer {
+                }
+              }
+              initializer {
+                truncated_normal_initializer {
+                }
+              }
+          }
+        }
+        box_coder {
+          faster_rcnn_box_coder {
+          }
+        }
+        matcher {
+          argmax_matcher {
+          }
+        }
+        similarity_calculator {
+          iou_similarity {
+          }
+        }
+        anchor_generator {
+          ssd_anchor_generator {
+            aspect_ratios: 1.0
+          }
+        }
+        image_resizer {
+          fixed_shape_resizer {
+            height: 320
+            width: 320
+          }
+        }
+        box_predictor {
+          convolutional_box_predictor {
+            conv_hyperparams {
+              regularizer {
+                l2_regularizer {
+                }
+              }
+              initializer {
+                truncated_normal_initializer {
+                }
+              }
+            }
+          }
+        }
+        normalize_loc_loss_by_codesize: true
+        loss {
+          classification_loss {
+            weighted_softmax {
+            }
+          }
+          localization_loss {
+            weighted_smooth_l1 {
+            }
+          }
+        }
+      }"""
+    model_proto = model_pb2.DetectionModel()
+    text_format.Merge(model_text_proto, model_proto)
+    model = self.create_model(model_proto)
+    self.assertIsInstance(model, ssd_meta_arch.SSDMetaArch)
+    self.assertIsInstance(model._feature_extractor,
+                          SSDVggFeatureExtractor)
+    self.assertTrue(model._normalize_loc_loss_by_codesize)
+    
   def test_create_embedded_ssd_mobilenet_v1_model_from_config(self):
     model_text_proto = """
       ssd {
