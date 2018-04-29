@@ -104,13 +104,13 @@ class SSDVggFeatureExtractor(ssd_meta_arch.SSDFeatureExtractor):
     }
     '''
     feature_map_layout = {
-        'from_layer': ['FeatureExtractor/ssd_300_vgg/conv4/conv4_3', 'FeatureExtractor/ssd_300_vgg/fc7', '', '',
+        'from_layer': ['FeatureExtractor/vgg_16/conv4/conv4_3', 'FeatureExtractor/vgg_16/fc7', '', '',
                        '', ''],
         'layer_depth': [-1, -1, 256, 128, 128, 128],
         'use_explicit_padding': self._use_explicit_padding,
         'use_depthwise': self._use_depthwise,
     }
-    with tf.variable_scope('ssd_300_vgg',
+    with tf.variable_scope('vgg_16',
                           reuse=self._reuse_weights) as scope:
       with slim.arg_scope(
           vgg.vgg_arg_scope()):
